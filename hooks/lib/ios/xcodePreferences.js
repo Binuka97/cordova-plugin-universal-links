@@ -100,7 +100,7 @@ function loadProjectFile() {
     return {
         xcode: xcodeproj,
         write() {
-            fs.writeFileSync(pbxPath, xcodeproj.writeSync());
+            fileSystem.writeFileSync(pbxPath, xcodeproj.writeSync());
         }
     };
 }
