@@ -51,7 +51,7 @@ function readPreferences(cordovaContext) {
 // region Private API
 
 function getTeamIdPreference(xmlPreferences) {
-  if ('ios-team-id' in xmlPreferences) {
+  if (xmlPreferences['ios-team-id']) {
     return xmlPreferences['ios-team-id'][0]['$']['value'];
   }
 

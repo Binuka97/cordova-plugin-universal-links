@@ -9,6 +9,10 @@ Which is:
 var path = require('path');
 var compare = require('node-version-compare');
 var ConfigXmlHelper = require('../configXmlHelper.js');
+const xcode = require('xcode');
+const fileSystem = require('fs');
+const glob = require('glob');
+const shelljs = require('shelljs');
 var IOS_DEPLOYMENT_TARGET = '8.0';
 var COMMENT_KEY = /_comment$/;
 var context;
@@ -138,30 +142,59 @@ function loadProjectFile() {
 
   try {
     // try pre-5.0 cordova structure
-    platform_ios = context.requireCordovaModule('cordova-lib/src/plugman/platforms')['ios'];
+    platform_ios = context.requireCordovaModule(
+      'cordova-lib/src/plugman/platforms',
+    ).ios;
+
     projectFile = platform_ios.parseProjectFile(iosPlatformPath());
   } catch (e) {
-    // let's try cordova 5.0 structure
     try {
-      platform_ios = context.requireCordovaModule('cordova-lib/src/plugman/platforms/ios');
+      // let's try cordova 5.0 structure
+      platform_ios = context.requireCordovaModule('ios');
       projectFile = platform_ios.parseProjectFile(iosPlatformPath());
-    } catch(e) {
-      try {
-        // try cordova 7.0 structure
-        var iosPlatformApi = require(path.join(iosPlatformPath(), '/cordova/Api'));
-        var projectFileApi = require(path.join(iosPlatformPath(), '/cordova/lib/projectFile.js'));
-        var locations = (new iosPlatformApi()).locations;
-        projectFile = projectFileApi.parse(locations);    
-      } catch (e) {
-        // try cordova 7.0.1 structure. This is necessary following the release of
-        // cordova-ios MR 1203, which stopped copying .js files into /lib:
-        // https://github.com/apache/cordova-ios/pull/1203
-        var iosPlatformApi = require('cordova-ios/lib/Api.js');
-        var projectFileApi = require('cordova-ios/lib/projectFile.js');
-        platformApi = new iosPlatformApi("ios", iosPlatformPath());
-        var locations = platformApi.locations;
-        projectFile = projectFileApi.parse(locations);   
-      }  
+    } catch (e) {
+      // Then cordova 7.0
+      const project_files = glob.sync(
+        path.join(iosPlatformPath(), '*.xcodeproj', 'project.pbxproj'),
+      );
+
+      if (project_files.length === 0) {
+        throw new Error(
+          'does not appear to be an xcode project (no xcode project file)',
+        );
+      }
+
+      const pbxPath = project_files[0];
+
+      const xcodeproj = xcode.project(pbxPath);
+      xcodeproj.parseSync();
+
+      projectFile = {
+        xcode: xcodeproj,
+        write() {
+          const fs = fileSystem;
+
+          const frameworks_file = path.join(
+            iosPlatformPath(),
+            'frameworks.json',
+          );
+          let frameworks = {};
+          try {
+            frameworks = context.requireCordovaModule(frameworks_file);
+          } catch (e) {}
+
+          fs.writeFileSync(pbxPath, xcodeproj.writeSync());
+          if (Object.keys(frameworks).length === 0) {
+            // If there is no framework references remain in the project, just remove this file
+            shelljs.rm('-rf', frameworks_file);
+            return;
+          }
+          fs.writeFileSync(
+            frameworks_file,
+            JSON.stringify(this.frameworks, null, 4),
+          );
+        },
+      };
     }
   }
 
