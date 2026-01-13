@@ -70,7 +70,14 @@ function generateAssociatedDomainsContent(pluginPreferences) {
 // ---------------- Path helpers ----------------
 
 function pathToEntitlementsFile() {
-    return path.join(getProjectRoot(), 'platforms', 'ios', getProjectName(), 'Resources', getProjectName() + '.entitlements');
+    return path.join(
+        getProjectRoot(),
+        'platforms',
+        'ios',
+        'App',
+        'Resources',
+        getProjectName() + '.entitlements'
+    );
 }
 
 function getProjectRoot() {

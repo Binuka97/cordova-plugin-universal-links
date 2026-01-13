@@ -71,7 +71,10 @@ function addPbxReference(xcodeProject) {
 
     if (!isPbxReferenceAlreadySet(fileReferenceSection, entitlementsFileName)) {
         console.log('Adding entitlements file to project references');
-        xcodeProject.addResourceFile(entitlementsFileName);
+        xcodeProject.addFile(
+            path.join('Resources', entitlementsFileName),
+            xcodeProject.findPBXGroupKey({ name: 'Resources' })
+        );
     } else {
         console.log('Entitlements file already in references');
     }
@@ -119,6 +122,9 @@ function projectRoot() {
 
 function pathToEntitlementsFile() {
     var configXmlHelper = new ConfigXmlHelper(context);
-    var projectName = configXmlHelper.getProjectName();
-    return path.join(projectName, 'Resources', projectName + '.entitlements');
+    return path.join(
+        'App',
+        'Resources',
+        configXmlHelper.getProjectName() + '.entitlements'
+    );
 }
